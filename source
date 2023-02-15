@@ -11,7 +11,7 @@ $$ |  $$ |\$$$$$$$ |\$$$$$$  |$$ |  $$ | \$$$$  |$$$$$$$  |
                                         
 ]]--
 
-if getgenv().ValiantAimHacks then return getgenv().ValiantAimHacks end
+if getgenv().haunts0001 then return getgenv().haunts0001 end
  
 -- // Services
 local Players = game:GetService("Players")
@@ -26,7 +26,7 @@ local CurrentCamera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
  
 -- // Silent Aim Vars
-getgenv().ValiantAimHacks = {
+getgenv().haunts0001 = {
     SilentAimEnabled = true,
     ShowFOV = false,
     VisibleCheck = true,
@@ -52,11 +52,11 @@ circle.Thickness = 2
 circle.Color = Color3.fromRGB(231, 84, 128)
 circle.NumSides = 12
 circle.Filled = false
-function ValiantAimHacks.updateCircle()
+function haunts0001.updateCircle()
     if (circle) then
         -- // Set Circle Properties
-        circle.Visible = ValiantAimHacks.ShowFOV
-        circle.Radius = (ValiantAimHacks.FOV * 3)
+        circle.Visible = haunts0001.ShowFOV
+        circle.Radius = (haunts0001.FOV * 3)
         circle.Position = Vector2.new(Mouse.X, Mouse.Y + GuiService:GetGuiInset().Y)
  
         -- // Return circle
@@ -72,7 +72,7 @@ calcChance = function(percentage)
 end
  
 -- // Customisable Checking Functions: Is a part visible
-function ValiantAimHacks.isPartVisible(Part, PartDescendant)
+function haunts0001.isPartVisible(Part, PartDescendant)
     -- // Vars
     local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local Origin = CurrentCamera.CFrame.Position
@@ -98,13 +98,13 @@ function ValiantAimHacks.isPartVisible(Part, PartDescendant)
 end
  
 -- // Check teams
-function ValiantAimHacks.checkTeam(targetPlayerA, targetPlayerB)
+function haunts0001.checkTeam(targetPlayerA, targetPlayerB)
     -- // If player is not on your team
     if (targetPlayerA.Team ~= targetPlayerB.Team) then
  
         -- // Check if team is blacklisted
-        for i = 1, #ValiantAimHacks.BlacklistedTeams do
-            local v = ValiantAimHacks.BlacklistedTeams
+        for i = 1, #haunts0001.BlacklistedTeams do
+            local v = haunts0001.BlacklistedTeams
  
             if (targetPlayerA.Team ~= v.Team and targetPlayerA.TeamColor ~= v.TeamColor) then
                 return true
@@ -117,9 +117,9 @@ function ValiantAimHacks.checkTeam(targetPlayerA, targetPlayerB)
 end
  
 -- // Check if player is blacklisted
-function ValiantAimHacks.checkPlayer(targetPlayer)
-    for i = 1, #ValiantAimHacks.BlacklistedPlayers do
-        local v = ValiantAimHacks.BlacklistedPlayers[i]
+function haunts0001.checkPlayer(targetPlayer)
+    for i = 1, #haunts0001.BlacklistedPlayers do
+        local v = haunts0001.BlacklistedPlayers[i]
  
         if (v ~= targetPlayer) then
             return true
@@ -131,9 +131,9 @@ function ValiantAimHacks.checkPlayer(targetPlayer)
 end
  
 -- // Check if player is whitelisted
-function ValiantAimHacks.checkWhitelisted(targetPlayer)
-    for i = 1, #ValiantAimHacks.WhitelistedPUIDs do
-        local v = ValiantAimHacks.WhitelistedPUIDs[i]
+function haunts0001.checkWhitelisted(targetPlayer)
+    for i = 1, #haunts0001.WhitelistedPUIDs do
+        local v = haunts0001.WhitelistedPUIDs[i]
  
         if (targetPlayer.UserId == v) then
             return true
@@ -145,7 +145,7 @@ function ValiantAimHacks.checkWhitelisted(targetPlayer)
 end
  
 -- // Get the Direction, Normal and Material
-function ValiantAimHacks.findDirectionNormalMaterial(Origin, Destination, UnitMultiplier)
+function haunts0001.findDirectionNormalMaterial(Origin, Destination, UnitMultiplier)
     if (typeof(Origin) == "Vector3" and typeof(Destination) == "Vector3") then
         -- // Handling
         if (not UnitMultiplier) then UnitMultiplier = 1 end
@@ -167,13 +167,13 @@ function ValiantAimHacks.findDirectionNormalMaterial(Origin, Destination, UnitMu
 end
  
 -- // Get Character
-function ValiantAimHacks.getCharacter(Player)
+function haunts0001.getCharacter(Player)
     return Player.Character
 end
  
 -- // Check Health
-function ValiantAimHacks.checkHealth(Player)
-    local Character = ValiantAimHacks.getCharacter(Player)
+function haunts0001.checkHealth(Player)
+    local Character = haunts0001.getCharacter(Player)
     local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
  
     local Health = (Humanoid and Humanoid.Health or 0)
@@ -181,20 +181,20 @@ function ValiantAimHacks.checkHealth(Player)
 end
  
 -- // Check if silent aim can used
-function ValiantAimHacks.checkSilentAim()
-    return (ValiantAimHacks.SilentAimEnabled == true and ValiantAimHacks.Selected ~= LocalPlayer)
+function haunts0001.checkSilentAim()
+    return (haunts0001.SilentAimEnabled == true and haunts0001.Selected ~= LocalPlayer)
 end
  
 -- // Silent Aim Function
-function ValiantAimHacks.getClosestPlayerToCursor()
+function haunts0001.getClosestPlayerToCursor()
     -- // Vars
     local ClosestPlayer = nil
-    local Chance = calcChance(ValiantAimHacks.HitChance)
+    local Chance = calcChance(haunts0001.HitChance)
     local ShortestDistance = 1/0
  
     -- // Chance
     if (not Chance) then
-        ValiantAimHacks.Selected = (Chance and LocalPlayer or LocalPlayer)
+        haunts0001.Selected = (Chance and LocalPlayer or LocalPlayer)
  
         return (Chance and LocalPlayer or LocalPlayer)
     end
@@ -203,21 +203,21 @@ function ValiantAimHacks.getClosestPlayerToCursor()
     local AllPlayers = Players:GetPlayers()
     for i = 1, #AllPlayers do
         local Player = AllPlayers[i]
-        local Character = ValiantAimHacks.getCharacter(Player)
+        local Character = haunts0001.getCharacter(Player)
  
-        if (not ValiantAimHacks.checkWhitelisted(Player) and ValiantAimHacks.checkPlayer(Player) and Character and Character:FindFirstChild(ValiantAimHacks.TargetPart) and ValiantAimHacks.checkHealth(Player)) then
+        if (not haunts0001.checkWhitelisted(Player) and haunts0001.checkPlayer(Player) and Character and Character:FindFirstChild(haunts0001.TargetPart) and haunts0001.checkHealth(Player)) then
             -- // Team Check
-            if (ValiantAimHacks.TeamCheck and not ValiantAimHacks.checkTeam(Player, LocalPlayer)) then continue end
+            if (haunts0001.TeamCheck and not haunts0001.checkTeam(Player, LocalPlayer)) then continue end
  
             -- // Vars
-            local TargetPart = Character[ValiantAimHacks.TargetPart]
+            local TargetPart = Character[haunts0001.TargetPart]
             local PartPos, _ = CurrentCamera:WorldToViewportPoint(TargetPart.Position)
             local Magnitude = (Vector2.new(PartPos.X, PartPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
  
             -- // Check if is in FOV
             if (circle.Radius > Magnitude and Magnitude < ShortestDistance) then
                 -- // Check if Visible
-                if (ValiantAimHacks.VisibleCheck and not ValiantAimHacks.isPartVisible(TargetPart, Character)) then continue end
+                if (haunts0001.VisibleCheck and not haunts0001.isPartVisible(TargetPart, Character)) then continue end
  
                 -- //
                 ClosestPlayer = Player
@@ -227,16 +227,16 @@ function ValiantAimHacks.getClosestPlayerToCursor()
     end
  
     -- // End
-    ValiantAimHacks.Selected = (Chance and ClosestPlayer or LocalPlayer)
+    haunts0001.Selected = (Chance and ClosestPlayer or LocalPlayer)
 end
  
 -- // Heartbeat Function
 Heartbeat:Connect(function()
-    ValiantAimHacks.updateCircle()
-    ValiantAimHacks.getClosestPlayerToCursor()
+    haunts0001.updateCircle()
+    haunts0001.getClosestPlayerToCursor()
 end)
  
-return ValiantAimHacks
+return haunts0001
  
 --[[
 Examples:
@@ -248,7 +248,7 @@ local backupindex = mt.__index
 setreadonly(mt, false)
  
 -- // Load Silent Aim
-local ValiantAimHacks = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Experimental%20Silent%20Aim%20Module.lua"))()
+local haunts0001 = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Experimental%20Silent%20Aim%20Module.lua"))()
  
 -- // Hook
 mt.__namecall = newcclosure(function(...)
@@ -280,17 +280,17 @@ local backupindex = mt.__index
 setreadonly(mt, false)
  
 -- // Load Silent Aim
-local ValiantAimHacks = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Experimental%20Silent%20Aim%20Module.lua"))()
+local haunts0001 = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Experimental%20Silent%20Aim%20Module.lua"))()
  
 -- // Hook
 mt.__index = newcclosure(function(t, k)
     -- // Check if it trying to get our mouse's hit or target
     if (t:IsA("Mouse") and (k == "Hit" or k == "Target")) then
         -- // If we can use the silent aim
-        if (ValiantAimHacks.checkSilentAim()) then
+        if (haunts0001.checkSilentAim()) then
             -- // Vars
-            local CPlayer = ValiantAimHacks.Selected
-            local Character = ValiantAimHacks.getCharacter(CPlayer) -- // good practice to use this to get the character
+            local CPlayer = haunts0001.Selected
+            local Character = haunts0001.getCharacter(CPlayer) -- // good practice to use this to get the character
  
             -- // Return modded val
             return (k == "Hit" and Character.Head.CFrame or Character.Head)
