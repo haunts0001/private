@@ -1,19 +1,24 @@
-_G.ShowFOV = true
-_G.VisibleCheck = true
-_G.TeamCheck = true
-_G.FOV = 15.17
-_G.HitChance = 100
-_G.Prediction = 0.12061
-_G.LockKey = "N"
-_G.Aimparts = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightHand", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftFoot", "LeftLowerLeg",  "LeftUpperLeg", "RightLowerLeg", "RightFoot",  "RightUpperLeg"}
-_G.Notifications = true
+getgenv().haunts = {
+    ['Keybind'] = "P"
+    ['Fov_Size'] = 15.17 
+    ['Fov_Visible'] = true
+    ['Prediction'] = 0.12061
+    ['Notifications'] = true
+    ['Aimparts'] = getgenv().Configs.One
+}
+getgenv().Configs = {
+    ['One'] = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightHand", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftFoot", "LeftLowerLeg",  "LeftUpperLeg", "RightLowerLeg", "RightFoot",  "RightUpperLeg"}
+    ['Two'] = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightLowerLeg"}
+    ['Three'] = {"Head", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightUpperArm", "LeftFoot"}
+}
+
 
 --Silent FOV
 local SilentFOV = Drawing.new("Circle")
-SilentFOV.Visible = _G.ShowFOV
+SilentFOV.Visible = getgenv().haunts.Fov_Visible
 SilentFOV.Thickness = 1
-SilentFOV.NumSides = 30
-SilentFOV.Radius = _G.FOV * 3
+SilentFOV.NumSides = 100
+SilentFOV.Radius = getgenv().haunts.Fov_Size * 3
 SilentFOV.Color = Color3.fromRGB(50,76,110)
 SilentFOV.Filled = false
 SilentFOV.Transparency = 0.7
@@ -77,9 +82,9 @@ end
 -- // Call Functions
 SendNotification("haunts#0001 - injecting haunts streamable", 3)
 wait(1.5)
-SendNotification("haunts#0001 - fov is ".._G.FOV, 5)
+SendNotification("haunts#0001 - fov is "..getgenv().haunts.Fov_Size, 5)
 wait(2)
-SendNotification("haunts#0001 - ".._G.LockKey.." to toggle Silent Aim.", 5)
+SendNotification("haunts#0001 - "..getgenv().haunts.Keybind.." to toggle Silent Aim.", 5)
 
 --Find the nearest player function
 local function FindTarget()
@@ -103,7 +108,7 @@ local function FindNearestPart()
     local dist, part = math.huge, nil
     if target then
         for _,v in pairs(target.Character:GetChildren()) do
-            if table.find(_G.Aimparts, v.Name) then
+            if table.find(getgenv().haunts.Aimparts, v.Name) then
                 local pos = c:WorldToViewportPoint(v.Position)
                 local Magn = (vect2(m.X, m.Y + 36) - vect2(pos.X, pos.Y)).Magnitude
                 if Magn < dist then
@@ -149,12 +154,12 @@ local function InRadius()
     if target and Hitpart then
         local pos = nil
         if CheckForAnti(target) then
-            pos = c:WorldToViewportPoint(target.Character[Hitpart].Position + target.Character[Hitpart].Velocity * _G.Prediction)
+            pos = c:WorldToViewportPoint(target.Character[Hitpart].Position + target.Character[Hitpart].Velocity * getgenv().haunts.Prediction)
         else
-            pos = c:WorldToViewportPoint(target.Character[Hitpart].Position + ((target.Character.Humanoid.MoveDirection * target.Character.Humanoid.WalkSpeed) * _G.Prediction))
+            pos = c:WorldToViewportPoint(target.Character[Hitpart].Position + ((target.Character.Humanoid.MoveDirection * target.Character.Humanoid.WalkSpeed) * getgenv().haunts.Prediction))
         end
         local mag = (vect2(m.X, m.Y + 36) - vect2(pos.X, pos.Y)).Magnitude
-        if mag < _G.FOV * 3 then
+        if mag < getgenv().haunts.Fov_Size * 3 then
             return true
         else
             return false
@@ -167,9 +172,9 @@ local function Silent()
     if target then
         if Hitpart and InRadius() then
             if not CheckForAnti(target) and CheckIfVisible(target) and not target.Character:WaitForChild("BodyEffects")["K.O"] then
-                mainevent:FireServer(namecalltype, target.Character[Hitpart].Position + (target.Character[Hitpart].Velocity * _G.Prediction))
+                mainevent:FireServer(namecalltype, target.Character[Hitpart].Position + (target.Character[Hitpart].Velocity * getgenv().haunts.Prediction))
             else
-                mainevent:FireServer(namecalltype, (target.Character[Hitpart].Position + ((target.Character.Humanoid.MoveDirection * target.Character.Humanoid.WalkSpeed) * _G.Prediction)))
+                mainevent:FireServer(namecalltype, (target.Character[Hitpart].Position + ((target.Character.Humanoid.MoveDirection * target.Character.Humanoid.WalkSpeed) * getgenv().haunts.Prediction)))
             end
         end
     end
@@ -180,15 +185,15 @@ rs.Heartbeat:Connect(function()
 end)
 
 m.KeyDown:Connect(function(k, t)
-    if k == _G.LockKey:lower() then
+    if k == getgenv().haunts.Keybind:lower() then
         if Toggled then
             Toggled = false
-            if _G.Notifications then
+            if getgenv().haunts.Notifications then
                 SendNotification("Silent disabled.", 2)
             end
         else
             Toggled = true
-            if _G.Notifications then
+            if getgenv().haunts.Notifications then
                 SendNotification("Silent enabled.", 2)
             end
         end
