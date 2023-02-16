@@ -21,7 +21,9 @@ getgenv().haunts = {
 }
 getgenv().Configs = {
     ['One'] = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightHand", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftFoot", "LeftLowerLeg",  "LeftUpperLeg", "RightLowerLeg", "RightFoot",  "RightUpperLeg"}
+
     ['Two'] = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightLowerLeg"}
+
     ['Three'] = {"Head", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightUpperArm", "LeftFoot"}
 }
 
