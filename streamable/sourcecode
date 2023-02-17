@@ -242,3 +242,14 @@ while true do
         humanoid.Velocity = velocity
     end
 end
+
+--Auto Prediction
+local function AutoPrediction()
+while getgenv().haunts.AutoPrediction do
+local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+    local Value = tostring(ping)
+    local pingValue = Value:split(" ")
+    local PingNumber = pingValue[1]
+    
+getgenv().haunts.Prediction = PingNumber / 1000 + 0.025
+end
