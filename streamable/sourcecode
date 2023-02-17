@@ -243,8 +243,6 @@ while true do
     end
 end
 
---Auto Prediction
-local function AutoPrediction()
 while getgenv().haunts.AutoPrediction do
 local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
     local Value = tostring(ping)
