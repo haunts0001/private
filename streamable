@@ -1,18 +1,3 @@
-getgenv().haunts = {
-    ['Keybind'] = "N"
-    ['Fov_Size'] = 15.17 
-    ['Fov_Visible'] = true
-    ['Prediction'] = 0.12061
-    ['Notifications'] = true
-    ['Aimparts'] = getgenv().Configs.One
-}
-getgenv().Configs = {
-    ['One'] = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightHand", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftFoot", "LeftLowerLeg",  "LeftUpperLeg", "RightLowerLeg", "RightFoot",  "RightUpperLeg"}
-    ['Two'] = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightLowerLeg"}
-    ['Three'] = {"Head", "HumanoidRootPart", "LowerTorso", "LeftHand", "RightUpperArm", "LeftFoot"}
-}
-
-
 --Silent FOV
 local SilentFOV = Drawing.new("Circle")
 SilentFOV.Visible = getgenv().haunts.Fov_Visible
