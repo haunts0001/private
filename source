@@ -1,322 +1,438 @@
---[[
+if getgenv().Aiming then return getgenv().Aiming end
 
-$$\                                      $$\               
-$$ |                                     $$ |              
-$$$$$$$\   $$$$$$\  $$\   $$\ $$$$$$$\ $$$$$$\    $$$$$$$\ 
-$$  __$$\  \____$$\ $$ |  $$ |$$  __$$\\_$$  _|  $$  _____|
-$$ |  $$ | $$$$$$$ |$$ |  $$ |$$ |  $$ | $$ |    \$$$$$$\  
-$$ |  $$ |$$  __$$ |$$ |  $$ |$$ |  $$ | $$ |$$\  \____$$\ 
-$$ |  $$ |\$$$$$$$ |\$$$$$$  |$$ |  $$ | \$$$$  |$$$$$$$  |
-\__|  \__| \_______| \______/ \__|  \__|  \____/ \_______/     
-                                        
-]]--
-
-if getgenv().haunts0001 then return getgenv().haunts0001 end
- 
 -- // Services
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
- 
+
 -- // Vars
 local Heartbeat = RunService.Heartbeat
 local LocalPlayer = Players.LocalPlayer
 local CurrentCamera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
- 
+
+-- // Optimisation Vars (ugly)
+local Drawingnew = Drawing.new
+local Color3fromRGB = Color3.fromRGB
+local Vector2new = Vector2.new
+local GetGuiInset = GuiService.GetGuiInset
+local Randomnew = Random.new
+local mathfloor = math.floor
+local CharacterAdded = LocalPlayer.CharacterAdded
+local CharacterAddedWait = CharacterAdded.Wait
+local WorldToViewportPoint = CurrentCamera.WorldToViewportPoint
+local RaycastParamsnew = RaycastParams.new
+local EnumRaycastFilterTypeBlacklist = Enum.RaycastFilterType.Blacklist
+local Raycast = Workspace.Raycast
+local GetPlayers = Players.GetPlayers
+local Instancenew = Instance.new
+local IsDescendantOf = Instancenew("Part").IsDescendantOf
+local FindFirstChildWhichIsA = Instancenew("Part").FindFirstChildWhichIsA
+local FindFirstChild = Instancenew("Part").FindFirstChild
+local tableremove = table.remove
+local tableinsert = table.insert
+
 -- // Silent Aim Vars
-getgenv().haunts0001 = {
-    SilentAimEnabled = true,
+getgenv().Aiming = {
+    Enabled = true,
+
     ShowFOV = false,
+    FOV = 119,
+    FOVSides = 300,
+    FOVColour = Color3fromRGB(0, 0, 0),
+
     VisibleCheck = true,
-    TeamCheck = true,
-    FOV = 15.17,
+    
     HitChance = 100,
-    Selected = LocalPlayer,
-    TargetPart = "Head",
-    BlacklistedTeams = {
-        {
-            Team = LocalPlayer.Team,
-            TeamColor = LocalPlayer.TeamColor,
+
+    Selected = nil,
+    SelectedPart = nil,
+
+    TargetPart = {"Head", "UpperTorso", "LowerTorso", "LeftLowerArm", "RightLowerArm", "RightUpperLeg", "LeftFoot", "RightFoot", "RightHand", "LeftHand"},
+
+    Ignored = {
+        Teams = {
+            {
+                Team = LocalPlayer.Team,
+                TeamColor = LocalPlayer.TeamColor,
+            },
         },
-    },
-    BlacklistedPlayers = {LocalPlayer},
-    WhitelistedPUIDs = {91318356},
+        Players = {
+            LocalPlayer,
+            91318356
+        }
+    }
 }
- 
--- // Show FOV
-local circle = Drawing.new("Circle")
-circle.Transparency = 0
-circle.Thickness = 2
-circle.Color = Color3.fromRGB(231, 84, 128)
-circle.NumSides = 12
+local Aiming = getgenv().Aiming
+
+-- // Create circle
+local circle = Drawingnew("Circle")
+circle.Transparency = 1
+circle.Thickness = 1
+circle.Color = Aiming.FOVColour
 circle.Filled = false
-function haunts0001.updateCircle()
-    if (circle) then
-        -- // Set Circle Properties
-        circle.Visible = haunts0001.ShowFOV
-        circle.Radius = (haunts0001.FOV * 3)
-        circle.Position = Vector2.new(Mouse.X, Mouse.Y + GuiService:GetGuiInset().Y)
- 
-        -- // Return circle
-        return circle
+Aiming.FOVCircle = circle
+
+-- // Update
+function Aiming.UpdateFOV()
+    -- // Make sure the circle exists
+    if not (circle) then
+        return
     end
+
+    -- // Set Circle Properties
+    circle.Visible = Aiming.ShowFOV
+    circle.Radius = (Aiming.FOV * 3)
+    circle.Position = Vector2new(Mouse.X, Mouse.Y + GetGuiInset(GuiService).Y)
+    circle.NumSides = Aiming.FOVSides
+    circle.Color = Aiming.FOVColour
+
+    -- // Return circle
+    return circle
 end
- 
+
 -- // Custom Functions
-calcChance = function(percentage)
-    percentage = math.floor(percentage)
-    local chance = math.floor(Random.new().NextNumber(Random.new(), 0, 1) * 100) / 100
-    return chance <= percentage/100
+local CalcChance = function(percentage)
+    -- // Floor the percentage
+    percentage = mathfloor(percentage)
+
+    -- // Get the chance
+    local chance = mathfloor(Randomnew().NextNumber(Randomnew(), 0, 1) * 100) / 100
+
+    -- // Return
+    return chance <= percentage / 100
 end
- 
+
 -- // Customisable Checking Functions: Is a part visible
-function haunts0001.isPartVisible(Part, PartDescendant)
+function Aiming.IsPartVisible(Part, PartDescendant)
     -- // Vars
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local Character = LocalPlayer.Character or CharacterAddedWait(CharacterAdded)
     local Origin = CurrentCamera.CFrame.Position
-    local _, OnScreen = CurrentCamera:WorldToViewportPoint(Part.Position)
- 
-    -- // If Part is on the screen
+    local _, OnScreen = WorldToViewportPoint(CurrentCamera, Part.Position)
+
+    -- //
     if (OnScreen) then
-        -- // Vars: Calculating if is visible
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        -- // Vars
+        local raycastParams = RaycastParamsnew()
+        raycastParams.FilterType = EnumRaycastFilterTypeBlacklist
         raycastParams.FilterDescendantsInstances = {Character, CurrentCamera}
- 
-        local Result = Workspace:Raycast(Origin, Part.Position - Origin, raycastParams)
-        local PartHit = Result.Instance
-        local Visible = (not PartHit or PartHit:IsDescendantOf(PartDescendant))
- 
-        -- // Return
-        return Visible
+
+        -- // Cast ray
+        local Result = Raycast(Workspace, Origin, Part.Position - Origin, raycastParams)
+
+        -- // Make sure we get a result
+        if (Result) then
+            -- // Vars
+            local PartHit = Result.Instance
+            local Visible = (not PartHit or IsDescendantOf(PartHit, PartDescendant))
+
+            -- // Return
+            return Visible
+        end
     end
- 
+
     -- // Return
     return false
 end
- 
+
+-- // Ignore player
+function Aiming.IgnorePlayer(Player)
+    -- // Vars
+    local Ignored = Aiming.Ignored
+    local IgnoredPlayers = Ignored.Players
+
+    -- // Find player in table
+    for _, IgnoredPlayer in ipairs(IgnoredPlayers) do
+        -- // Make sure player matches
+        if (IgnoredPlayer == Player) then
+            return false
+        end
+    end
+
+    -- // Blacklist player
+    tableinsert(IgnoredPlayers, Player)
+    return true
+end
+
+-- // Unignore Player
+function Aiming.UnIgnorePlayer(Player)
+    -- // Vars
+    local Ignored = Aiming.Ignored
+    local IgnoredPlayers = Ignored.Players
+
+    -- // Find player in table
+    for i, IgnoredPlayer in ipairs(IgnoredPlayers) do
+        -- // Make sure player matches
+        if (IgnoredPlayer == Player) then
+            -- // Remove from ignored
+            tableremove(IgnoredPlayers, i)
+            return true
+        end
+    end
+
+    -- //
+    return false
+end
+
+-- // Ignore team
+function Aiming.IgnoreTeam(Team, TeamColor)
+    -- // Vars
+    local Ignored = Aiming.Ignored
+    local IgnoredTeams = Ignored.Teams
+
+    -- // Find team in table
+    for _, IgnoredTeam in ipairs(IgnoredTeams) do
+        -- // Make sure team matches
+        if (IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor) then
+            return false
+        end
+    end
+
+    -- // Ignore team
+    tableinsert(IgnoredTeams, {Team, TeamColor})
+    return true
+end
+
+-- // Unignore team
+function Aiming.UnIgnoreTeam(Team, TeamColor)
+    -- // Vars
+    local Ignored = Aiming.Ignored
+    local IgnoredTeams = Ignored.Teams
+
+    -- // Find team in table
+    for i, IgnoredTeam in ipairs(IgnoredTeams) do
+        -- // Make sure team matches
+        if (IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor) then
+            -- // Remove
+            tableremove(IgnoredTeams, i)
+            return true
+        end
+    end
+
+    -- // Return
+    return false
+end
+
+-- //  Toggle team check
+function Aiming.TeamCheck(Toggle)
+    if (Toggle) then
+        return Aiming.IgnoreTeam(LocalPlayer.Team, LocalPlayer.TeamColor)
+    end
+
+    return Aiming.UnIgnoreTeam(LocalPlayer.Team, LocalPlayer.TeamColor)
+end
+
 -- // Check teams
-function haunts0001.checkTeam(targetPlayerA, targetPlayerB)
-    -- // If player is not on your team
-    if (targetPlayerA.Team ~= targetPlayerB.Team) then
- 
-        -- // Check if team is blacklisted
-        for i = 1, #haunts0001.BlacklistedTeams do
-            local v = haunts0001.BlacklistedTeams
- 
-            if (targetPlayerA.Team ~= v.Team and targetPlayerA.TeamColor ~= v.TeamColor) then
-                return true
-            end
-        end
-    end
- 
-    -- // Return
-    return false
-end
- 
--- // Check if player is blacklisted
-function haunts0001.checkPlayer(targetPlayer)
-    for i = 1, #haunts0001.BlacklistedPlayers do
-        local v = haunts0001.BlacklistedPlayers[i]
- 
-        if (v ~= targetPlayer) then
+function Aiming.IsIgnoredTeam(Player)
+    -- // Vars
+    local Ignored = Aiming.Ignored
+    local IgnoredTeams = Ignored.Teams
+
+    -- // Check if team is ignored
+    for _, IgnoredTeam in ipairs(IgnoredTeams) do
+        -- // Make sure team matches
+        if (Player.Team == IgnoredTeam.Team and Player.TeamColor == IgnoredTeam.TeamColor) then
             return true
         end
     end
- 
+
     -- // Return
     return false
 end
- 
--- // Check if player is whitelisted
-function haunts0001.checkWhitelisted(targetPlayer)
-    for i = 1, #haunts0001.WhitelistedPUIDs do
-        local v = haunts0001.WhitelistedPUIDs[i]
- 
-        if (targetPlayer.UserId == v) then
+
+-- // Check if player (and team) is ignored
+function Aiming.IsIgnored(Player)
+    -- // Vars
+    local Ignored = Aiming.Ignored
+    local IgnoredPlayers = Ignored.Players
+
+    -- // Loop
+    for _, IgnoredPlayer in ipairs(IgnoredPlayers) do
+        -- // Check if Player Id
+        if (typeof(IgnoredPlayer) == "number" and Player.UserId == IgnoredPlayer) then
+            return true
+        end
+
+        -- // Normal Player Instance
+        if (IgnoredPlayer == Player) then
             return true
         end
     end
- 
-    -- // Return
-    return false
+
+    -- // Team check
+    return Aiming.IsIgnoredTeam(Player)
 end
- 
+
 -- // Get the Direction, Normal and Material
-function haunts0001.findDirectionNormalMaterial(Origin, Destination, UnitMultiplier)
+function Aiming.Raycast(Origin, Destination, UnitMultiplier)
     if (typeof(Origin) == "Vector3" and typeof(Destination) == "Vector3") then
         -- // Handling
         if (not UnitMultiplier) then UnitMultiplier = 1 end
- 
+
         -- // Vars
         local Direction = (Destination - Origin).Unit * UnitMultiplier
-        local RaycastResult = Workspace:Raycast(Origin, Direction)
- 
-        if (RaycastResult ~= nil) then
-            local Normal = RaycastResult.Normal
-            local Material = RaycastResult.Material
- 
+        local Result = Raycast(Workspace, Origin, Direction)
+
+        -- // Make sure we have a result
+        if (Result) then
+            local Normal = Result.Normal
+            local Material = Result.Material
+
             return Direction, Normal, Material
         end
     end
- 
+
     -- // Return
     return nil
 end
- 
+
 -- // Get Character
-function haunts0001.getCharacter(Player)
+function Aiming.Character(Player)
     return Player.Character
 end
- 
+
 -- // Check Health
-function haunts0001.checkHealth(Player)
-    local Character = haunts0001.getCharacter(Player)
-    local Humanoid = Character:FindFirstChildWhichIsA("Humanoid")
- 
+function Aiming.CheckHealth(Player)
+    -- // Get Humanoid
+    local Character = Aiming.Character(Player)
+    local Humanoid = FindFirstChildWhichIsA(Character, "Humanoid")
+
+    -- // Get Health
     local Health = (Humanoid and Humanoid.Health or 0)
+
+    -- //
     return Health > 0
 end
- 
+
 -- // Check if silent aim can used
-function haunts0001.checkSilentAim()
-    return (haunts0001.SilentAimEnabled == true and haunts0001.Selected ~= LocalPlayer)
+function Aiming.Check()
+    return (Aiming.Enabled == true and Aiming.Selected ~= LocalPlayer and Aiming.SelectedPart ~= nil)
 end
- 
--- // Silent Aim Function
-function haunts0001.getClosestPlayerToCursor()
+Aiming.checkSilentAim = Aiming.Check
+
+-- // Get Closest Target Part
+function Aiming.GetClosestTargetPartToCursor(Character)
+    local TargetParts = Aiming.TargetPart
+
     -- // Vars
-    local ClosestPlayer = nil
-    local Chance = calcChance(haunts0001.HitChance)
+    local ClosestPart = nil
+    local ClosestPartPosition = nil
+    local ClosestPartOnScreen = false
+    local ClosestPartMagnitudeFromMouse = nil
     local ShortestDistance = 1/0
- 
+
+    -- //
+    local function CheckTargetPart(TargetPart)
+        -- // Convert string -> Instance
+        if (typeof(TargetPart) == "string") then
+            TargetPart = FindFirstChild(Character, TargetPart)
+        end
+
+        -- // Make sure we have a target
+        if not (TargetPart) then
+            return
+        end
+
+        -- // Get the length between Mouse and Target Part (on screen)
+        local PartPos, onScreen = WorldToViewportPoint(CurrentCamera, TargetPart.Position)
+        local GuiInset = GetGuiInset(GuiService)
+        local Magnitude = (Vector2new(PartPos.X, PartPos.Y - GuiInset.Y) - Vector2new(Mouse.X, Mouse.Y)).Magnitude
+
+        -- //
+        if (Magnitude < ShortestDistance) then
+            ClosestPart = TargetPart
+            ClosestPartPosition = PartPos
+            ClosestPartOnScreen = onScreen
+            ClosestPartMagnitudeFromMouse = Magnitude
+            ShortestDistance = Magnitude
+        end
+    end
+
+    -- // String check
+    if (typeof(TargetParts) == "string") then
+        -- // Check if it all
+        if (TargetParts == "All") then
+            -- // Loop through character children
+            for _, v in ipairs(Character:GetChildren()) do
+                -- // See if it a part
+                if not (v:IsA("BasePart")) then
+                    continue
+                end
+
+                -- // Check it
+                CheckTargetPart(v)
+            end
+        else
+            -- // Individual
+            CheckTargetPart(TargetParts)
+        end
+    end
+
+    -- //
+    if (typeof(TargetParts) == "table") then
+        -- // Loop through all target parts and check them
+        for _, TargetPartName in ipairs(TargetParts) do
+            CheckTargetPart(TargetPartName)
+        end
+    end
+
+    -- //
+    return ClosestPart, ClosestPartPosition, ClosestPartOnScreen, ClosestPartMagnitudeFromMouse
+end
+
+-- // Silent Aim Function
+function Aiming.GetClosestPlayerToCursor()
+    -- // Vars
+    local TargetPart = nil
+    local ClosestPlayer = nil
+    local Chance = CalcChance(Aiming.HitChance)
+    local ShortestDistance = 1/0
+
     -- // Chance
     if (not Chance) then
-        haunts0001.Selected = (Chance and LocalPlayer or LocalPlayer)
- 
-        return (Chance and LocalPlayer or LocalPlayer)
+        Aiming.Selected = LocalPlayer
+        Aiming.SelectedPart = nil
+
+        return LocalPlayer
     end
- 
+
     -- // Loop through all players
-    local AllPlayers = Players:GetPlayers()
-    for i = 1, #AllPlayers do
-        local Player = AllPlayers[i]
-        local Character = haunts0001.getCharacter(Player)
- 
-        if (not haunts0001.checkWhitelisted(Player) and haunts0001.checkPlayer(Player) and Character and Character:FindFirstChild(haunts0001.TargetPart) and haunts0001.checkHealth(Player)) then
-            -- // Team Check
-            if (haunts0001.TeamCheck and not haunts0001.checkTeam(Player, LocalPlayer)) then continue end
- 
+    for _, Player in ipairs(GetPlayers(Players)) do
+        -- // Get Character
+        local Character = Aiming.Character(Player)
+
+        -- // Make sure isn't ignored and Character exists
+        if (Aiming.IsIgnored(Player) == false and Character) then
             -- // Vars
-            local TargetPart = Character[haunts0001.TargetPart]
-            local PartPos, _ = CurrentCamera:WorldToViewportPoint(TargetPart.Position)
-            local Magnitude = (Vector2.new(PartPos.X, PartPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
- 
-            -- // Check if is in FOV
-            if (circle.Radius > Magnitude and Magnitude < ShortestDistance) then
-                -- // Check if Visible
-                if (haunts0001.VisibleCheck and not haunts0001.isPartVisible(TargetPart, Character)) then continue end
- 
-                -- //
-                ClosestPlayer = Player
-                ShortestDistance = Magnitude
+            local TargetPartTemp, _, _, Magnitude = Aiming.GetClosestTargetPartToCursor(Character)
+
+            -- // Check if part exists and health
+            if (TargetPartTemp and Aiming.CheckHealth(Player)) then
+                -- // Check if is in FOV
+                if (circle.Radius > Magnitude and Magnitude < ShortestDistance) then
+                    -- // Check if Visible
+                    if (Aiming.VisibleCheck and not Aiming.IsPartVisible(TargetPartTemp, Character)) then continue end
+
+                    -- // Set vars
+                    ClosestPlayer = Player
+                    ShortestDistance = Magnitude
+                    TargetPart = TargetPartTemp
+                end
             end
         end
     end
- 
+
     -- // End
-    haunts0001.Selected = (Chance and ClosestPlayer or LocalPlayer)
+    Aiming.Selected = ClosestPlayer
+    Aiming.SelectedPart = TargetPart
 end
- 
+
 -- // Heartbeat Function
 Heartbeat:Connect(function()
-    haunts0001.updateCircle()
-    haunts0001.getClosestPlayerToCursor()
+    Aiming.UpdateFOV()
+    Aiming.GetClosestPlayerToCursor()
 end)
- 
-return haunts0001
- 
---[[
-Examples:
- 
---// Namecall Version // --
--- // Metatable Variables
-local mt = getrawmetatable(game)
-local backupindex = mt.__index
-setreadonly(mt, false)
- 
--- // Load Silent Aim
-local haunts0001 = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/haunts0001/haunts/main/silentaim"))()
- 
--- // Hook
-mt.__namecall = newcclosure(function(...)
-    -- // Vars
-    local args = {...}
-    local method = getnamecallmethod()
- 
-    -- // Checks
-    if (method == "FireServer") then
-        if (args[1].Name == "RemoteNameHere") then
-            -- change args
- 
-            -- // Return changed arguments
-            return backupnamecall(unpack(args))
-        end
-    end
- 
-    -- // Return
-    return backupnamecall(...)
-end)
- 
--- // Revert Metatable readonly status
-setreadonly(mt, true)
- 
--- // Index Version // --
--- // Metatable Variables
-local mt = getrawmetatable(game)
-local backupindex = mt.__index
-setreadonly(mt, false)
- 
--- // Load Silent Aim
-local haunts0001 = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/haunts0001/haunts/main/silentaim"))()
- 
--- // Hook
-mt.__index = newcclosure(function(t, k)
-    -- // Check if it trying to get our mouse's hit or target
-    if (t:IsA("Mouse") and (k == "Hit" or k == "Target")) then
-        -- // If we can use the silent aim
-        if (haunts0001.checkSilentAim()) then
-            -- // Vars
-            local CPlayer = haunts0001.Selected
-            local Character = haunts0001.getCharacter(CPlayer) -- // good practice to use this to get the character
- 
-            -- // Return modded val
-            return (k == "Hit" and Character.Head.CFrame or Character.Head)
-        end
-    end
- 
-    -- // Return
-    return backupindex(t, k)
-end)
- 
--- // Revert Metatable readonly status
-setreadonly(mt, true)
-]]
 
--- // NoGroundShots
-
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-
-while true do
-    wait(0.1)
-    local velocity = humanoid.Velocity
-    local speed = velocity.magnitude
-    if speed < 0 then
-        velocity = Vector3.new(0, 0, 0)
-        humanoid.Velocity = velocity
-    end
-end
+-- //
+return Aiming
