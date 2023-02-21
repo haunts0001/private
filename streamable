@@ -1,238 +1,315 @@
---Silent FOV
-local SilentFOV = Drawing.new("Circle")
-SilentFOV.Visible = getgenv().haunts.Fov_Visible
-SilentFOV.Thickness = 1
-SilentFOV.NumSides = 100
-SilentFOV.Radius = getgenv().haunts.Fov_Size * 3
-SilentFOV.Color = Color3.fromRGB(50,76,110)
-SilentFOV.Filled = false
-SilentFOV.Transparency = 0.7
+getgenv().Haunts = {
+    Silent = {
+        ['Enabled'] = true,
+        ['UseKeybind'] = true,
+        ['Keybind'] = "V",
+        ['Prediction'] = 0.1253,
+        ['AutoPrediction'] = true,
+        ['HitChance'] = 100,
+        ['Part'] = "HumanoidRootPart",
+        ['Resolver'] = true,
+    },
+    Fov = {
+        ['Visible'] = true,
+        ['Radius'] = 18,
+    },
+    Checks = {
+        ['Knocked'] = true,
+        ['Wall'] = true,
+    },
+    Range = {
+        ['Enabled'] = true,
+        ['CloseFov'] = 20,
+        ['MidFov'] = 12.5,
+        ['FarFov'] = 5,
+    },
+}
 
-local function getnamecall()
-    if game.PlaceId == 2788229376 then
-        return "UpdateMousePos"
-    elseif game.PlaceId == 5602055394 or game.PlaceId == 7951883376 then
-        return "MousePos"
-    elseif game.PlaceId == 9825515356 then
-        return "GetMousePos"
-    end
-end
 
-local namecalltype = getnamecall()
 
-function MainEventLocate()
-    for _,v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
-        if v.Name == "MainEvent" then
-            return v
-        end
-    end
-end
 
-local mainevent = MainEventLocate()
 
---Optimization
-local vect3 = Vector3.new
-local vect2 = Vector2.new
-local cnew = CFrame.new
 
---Libraries
-local NotificationHolder = loadstring(game:HttpGet("https://raw.githubusercontent.com/BocusLuke/UI/main/STX/Module.Lua"))()
-local Notification = loadstring(game:HttpGet("https://raw.githubusercontent.com/BocusLuke/UI/main/STX/Client.Lua"))()
 
---Services
-local uis = game:GetService("UserInputService")
-local rs = game:GetService("RunService")
-local plrs = game:GetService("Players")
-local ws = game:GetService("Workspace")
+local Aiming = loadstring(game:HttpGet("https://raw.githubusercontent.com/haunts0001/private/main/source"))()
+    
+    Aiming.TeamCheck(false)
+    
+    
+    
+    local Workspace = game:GetService("Workspace")
+    
+    local Players = game:GetService("Players")
+    
+    local RunService = game:GetService("RunService")
+    
+    local UserInputService = game:GetService("UserInputService")
+    
+    
+    
+    local LocalPlayer = Players.LocalPlayer
+    
+    local Mouse = LocalPlayer:GetMouse()
+    
+    local CurrentCamera = Workspace.CurrentCamera
+    
+    
+    -------------------------------------------------- 
+    local DaHoodSettings = {
+        
+        SilentAim = getgenv().Haunts.Silent.Enabled,
+    
+        AimLock = false,
+    
+        Prediction = getgenv().Haunts.Silent.Prediction,
+        
+    }
+    -------------------------------------------------- 
+    Aiming.FOV = getgenv().Haunts.Fov.Radius  
+    Aiming.ShowFOV = getgenv().Haunts.Fov.Visible
+    Aiming.HitChance = getgenv().Haunts.HitChance
+    Aiming.VisibleCheck = getgenv().Haunts.Checks.Wall 
+    Aiming.SelectedPart = getgenv().Haunts.Silent.Part
 
---Script Variables
-local Toggled = false
-local lplr = plrs.LocalPlayer
-local target = nil
-local Hitpart = nil
 
---Client Variables
-local m = lplr:GetMouse()
-local c = ws.CurrentCamera
-
--- // Notification Function
-local function SendNotification(text, time)
-    Notification:Notify(
-        {Title = "haunts streamable", Description = text},
-        {OutlineColor = Color3.fromRGB(40,40,40),Time = time, Type = "image"},
-        {Image = "12491873313", ImageColor = Color3.fromRGB(50,76,110)}
-    )
-end 
-
--- // Call Functions
-SendNotification("haunts#0001 - injecting haunts streamable", 3)
-wait(1.5)
-SendNotification("haunts#0001 - fov is "..getgenv().haunts.Fov_Size, 5)
-wait(2)
-SendNotification("haunts#0001 - "..getgenv().haunts.Keybind.." to toggle Silent Aim.", 5)
-
---Find the nearest player function
-local function FindTarget()
-    local dist, targ = math.huge, nil
-    for  _,p in pairs(plrs:GetPlayers()) do
-        local _,os = c:WorldToViewportPoint(p.Character.PrimaryPart.Position)
-        if p ~= lplr and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health ~= 0 and p.Character:FindFirstChild("HumanoidRootPart") and os then
-            local pos = c:WorldToViewportPoint(p.Character.PrimaryPart.Position)
-            local magnitude = (vect2(pos.X, pos.Y) - vect2(m.X, m.Y)).magnitude
-            if magnitude < dist then
-                targ = p
-                dist = magnitude
-            end
-        end
-    end
-    target = targ
-end
-
---Find nearest part
-local function FindNearestPart()
-    local dist, part = math.huge, nil
-    if target then
-        for _,v in pairs(target.Character:GetChildren()) do
-            if table.find(getgenv().haunts.Aimparts, v.Name) then
-                local pos = c:WorldToViewportPoint(v.Position)
-                local Magn = (vect2(m.X, m.Y + 36) - vect2(pos.X, pos.Y)).Magnitude
-                if Magn < dist then
-                    dist = Magn
-                    part = v
-                end
-            end
-        end
-        Hitpart = part.Name
-    end
-end
-
---Check if player is on screen
-local function CheckIfVisible(target)
-    local obscuringParts = c:GetPartsObscuringTarget({c.CFrame.Position, target.Character.UpperTorso.Position}, {lplr.Character, target.Character.UpperTorso.Parent})
-    if #obscuringParts > 0 then
-        for i,v in pairs(obscuringParts) do
-            if not v:IsDescendantOf(lplr.Character) then
-                return false
-            end
-        end
-    end
-    return true
-end
-
---Anti-aim detection
-local function CheckForAnti(targ)
-    if (targ.Character.HumanoidRootPart.Velocity.Y < -5 and targ.Character.Humanoid:GetState() ~= Enum.HumanoidStateType.Freefall) or targ.Character.HumanoidRootPart.Velocity.Y < -50 then
-        return true
-    elseif targ and (targ.Character.HumanoidRootPart.Velocity.X > 35 or targ.Character.HumanoidRootPart.Velocity.X < -35) then
-        return true
-    elseif targ and targ.Character.HumanoidRootPart.Velocity.Y > 60 then
-        return true
-    elseif targ and (targ.Character.HumanoidRootPart.Velocity.Z > 35 or targ.Character.HumanoidRootPart.Velocity.Z < -35) then
-        return true
-    else
-        return false
-    end
-end
-
---Check if player is in fov
-local function InRadius()
-    if target and Hitpart then
-        local pos = nil
-        if CheckForAnti(target) then
-            pos = c:WorldToViewportPoint(target.Character[Hitpart].Position + target.Character[Hitpart].Velocity * getgenv().haunts.Prediction)
-        else
-            pos = c:WorldToViewportPoint(target.Character[Hitpart].Position + ((target.Character.Humanoid.MoveDirection * target.Character.Humanoid.WalkSpeed) * getgenv().haunts.Prediction))
-        end
-        local mag = (vect2(m.X, m.Y + 36) - vect2(pos.X, pos.Y)).Magnitude
-        if mag < getgenv().haunts.Fov_Size * 3 then
-            return true
-        else
+    --------------------------------------------------- 
+    
+    function Aiming.Check()
+    
+        if not (Aiming.Enabled == true and Aiming.Selected ~= LocalPlayer and Aiming.SelectedPart ~= nil) then
+    
             return false
+    
         end
-    end
-end
-
---Silent function
-local function Silent()
-    if target then
-        if Hitpart and InRadius() then
-            if not CheckForAnti(target) and CheckIfVisible(target) and not target.Character:WaitForChild("BodyEffects")["K.O"] then
-                mainevent:FireServer(namecalltype, target.Character[Hitpart].Position + (target.Character[Hitpart].Velocity * getgenv().haunts.Prediction))
-            else
-                mainevent:FireServer(namecalltype, (target.Character[Hitpart].Position + ((target.Character.Humanoid.MoveDirection * target.Character.Humanoid.WalkSpeed) * getgenv().haunts.Prediction)))
-            end
+    
+        local Character = Aiming.Character(Aiming.Selected)
+    
+        local KOd = Character:WaitForChild("BodyEffects")["K.O"].Value
+    
+        local Grabbed = Character:FindFirstChild("GRABBING_CONSTRAINT") ~= nil
+    
+        if getgenv().Haunts.Checks.Knocked and (KOd or Grabbed) then
+    
+            return false
+    
         end
+    
+        return true
+    
     end
-end
 
-rs.Heartbeat:Connect(function()
-    SilentFOV.Position = vect2(m.X, m.Y + 36)
-end)
 
-m.KeyDown:Connect(function(k, t)
-    if k == getgenv().haunts.Keybind:lower() then
-        if Toggled then
-            Toggled = false
-            if getgenv().haunts.Notifications then
-                SendNotification("Silent disabled.", 2)
-            end
-        else
-            Toggled = true
-            if getgenv().haunts.Notifications then
-                SendNotification("Silent enabled.", 2)
-            end
+    
+    
+    
+    task.spawn(function()
+    
+        while task.wait() do
+    
+            if getgenv().Haunts.Silent.Resolver and Aiming.Selected ~= nil and (Aiming.Selected.Character)  then
+    
+                local oldVel = game.Players[Aiming.Selected.Name].Character.HumanoidRootPart.Velocity
+    
+                game.Players[Aiming.Selected.Name].Character.HumanoidRootPart.Velocity = Vector3.new(oldVel.X, -0, oldVel.Z)
+    
+            end 
+    
         end
-    end
-end)
+    
+    end)
 
---When gun shoots
-lplr.Character.ChildAdded:Connect(function(tool)
-    if tool:IsA("Tool") then
-        tool.Activated:connect(function()
-            if Toggled then
-                FindTarget()
-                FindNearestPart()
-                Silent()
+    game:GetService("RunService").Heartbeat:Connect(
+                                function()
+                                    if
+                                        getgenv().Haunts.Range.Enabled == true and Aiming.Selected ~= nil and (Aiming.Selected.Character) then
+                                        if
+                                            (game.Players[Aiming.Selected.Name].Character.HumanoidRootPart.Position -
+                                                game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <
+                                                30
+                                         then
+                                             
+                                            Aiming.FOV = getgenv().Haunts.Range.CloseFov
+                                           
+                                            
+                                        elseif
+                                            (game.Players[Aiming.Selected.Name].Character.HumanoidRootPart.Position -
+                                                game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <
+                                                90
+                                         then
+                                            
+                                            Aiming.FOV = getgenv().Haunts.Range.MidFov
+        
+                                        elseif
+                                            (game.Players[Aiming.Selected.Name].Character.HumanoidRootPart.Position -
+                                                game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <
+                                                math.huge
+                                         then
+                                            Aiming.FOV = getgenv().Haunts.Range.FarFov
+
+
+                                        end
+                                    end
+                                end
+                            )
+    
+    
+    
+    local __index
+    
+    __index = hookmetamethod(game, "__index", function(t, k)
+    
+        if (t:IsA("Mouse") and (k == "Hit" or k == "Target") and Aiming.Check()) then
+    
+            local SelectedPart = Aiming.SelectedPart
+    
+            if (DaHoodSettings.SilentAim and (k == "Hit" or k == "Target")) then
+    
+                local Hit = SelectedPart.CFrame + (SelectedPart.Velocity * DaHoodSettings.Prediction)
+    
+                return (k == "Hit" and Hit or SelectedPart)
+    
             end
-        end)
-    end
-end)
-
-lplr.CharacterAdded:Connect(function(char)
-    char.ChildAdded:Connect(function(tool)
-        if tool:IsA("Tool") then
-            tool.Activated:connect(function()
-                if Toggled then
-                    FindTarget()
-                    FindNearestPart()
-                    Silent()
-                end
-            end)
+    
+        end
+    
+    
+    
+        return __index(t, k)
+    
+    end)
+    
+    
+    
+    RunService:BindToRenderStep("AimLock", 0, function()
+    
+        if (DaHoodSettings.AimLock and Aiming.Check() and UserInputService:IsKeyDown(DaHoodSettings.AimLockKeybind)) then
+    
+            local SelectedPart = Aiming.SelectedPart
+    
+            local Hit = SelectedPart.CFrame + (SelectedPart.Velocity * DaHoodSettings.Prediction)
+    
+            CurrentCamera.CFrame = CFrame.lookAt(CurrentCamera.CFrame.Position, Hit.Position)
+    
         end
     end)
+    
+    local WallCheck = function(destination, ignore)
+        local Origin    = Camera.CFrame.p
+        local CheckRay  = Ray.new(Origin, destination - Origin)
+        local Hit       = game.workspace:FindPartOnRayWithIgnoreList(CheckRay, ignore)
+        return Hit      == nil
+    end
+    
+    local WTS = function (Object)
+        local ObjectVector = Camera:WorldToScreenPoint(Object.Position)
+        return Vector2.new(ObjectVector.X, ObjectVector.Y)
+    end
+    
+    local IsOnScreen = function (Object)
+        local IsOnScreen = Camera:WorldToScreenPoint(Object.Position)
+        return IsOnScreen
+    end
+    
+    local FilterObjs = function (Object)
+        if string.find(Object.Name, "Gun") then
+            return
+        end
+        if table.find({"Part", "MeshPart", "BasePart"}, Object.ClassName) then
+            return true
+        end
+    end
+    
+    local ClosestPlrFromMouse2 = function()
+        local Target, Closest = nil, Aiming.FOV * 1.27
+        
+        for _ ,v in pairs(Players:GetPlayers()) do
+            if (v.Character and v ~= Client and v.Character:FindFirstChild("HumanoidRootPart")) then
+                if getgenv().Haunts.Checks.Wall then
+                    local Position, OnScreen = Camera:WorldToScreenPoint(v.Character.HumanoidRootPart.Position)
+                    local Distance = (Vector2.new(Position.X, Position.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+            
+                    if (Distance < Closest and OnScreen) and WallCheck(v.Character.HumanoidRootPart.Position, {Client, v.Character}) then
+                        Closest = Distance
+                        Target = v
+                    end
+                    end
+                end
+            end
+        return Target
+    end
+    
+
+    
+    local GetClosestBodyPartV2 = function (character)
+        local ClosestDistance = 1/0
+        local BodyPart = nil
+        
+        if (character and character:GetChildren()) then
+            for _,  x in next, character:GetChildren() do
+                if FilterObjs(x) and IsOnScreen(x) then
+                    local Distance = (WTS(x) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                    if (Distance < ClosestDistance) then
+                        ClosestDistance = Distance
+                        BodyPart = x
+                    end
+                end
+            end
+        end
+        return BodyPart
+    end
+    
+    task.spawn(function ()
+        while task.wait() do
+            if getgenv().Haunts.Silent.Enabled then
+                getgenv().Haunts.Silent.Part = tostring(GetClosestBodyPartV2)
+            end
+end 
 end)
 
---NoGroundShots
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-
-while true do
-    wait(0.1)
-    local velocity = humanoid.Velocity
-    local speed = velocity.magnitude
-    if speed < 0 then
-        velocity = Vector3.new(0, 0, 0)
-        humanoid.Velocity = velocity
-    end
-end
-
---Auto Prediction
-while getgenv().haunts.AutoPrediction do
-local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
-    local Value = tostring(ping)
-    local pingValue = Value:split(" ")
-    local PingNumber = pingValue[1]
     
-getgenv().haunts.Prediction = PingNumber / 1000 + 0.025
-end
+    while getgenv().Haunts.Silent.AutoPrediction == true do
+        local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+        local pingValue = string.split(ping, " ")[1]
+        local pingNumber = tonumber(pingValue)
+            if pingNumber < 30 then
+            getgenv().Haunts.Silent.Prediction = 0.12588
+            elseif pingNumber < 40 then
+                getgenv().Haunts.Silent.Prediction = 0.11911
+            elseif pingNumber < 50 then
+                getgenv().Haunts.Silent.Prediction = 0.12471
+            elseif pingNumber < 60 then
+                getgenv().Haunts.Silent.Prediction = 0.12766
+            elseif pingNumber < 70 then
+                getgenv().Haunts.Silent.Prediction = 0.12731
+            elseif pingNumber < 80 then
+                getgenv().Haunts.Silent.Prediction = 0.12951
+            elseif pingNumber < 90 then
+                getgenv().Haunts.Silent.Prediction = 0.13181
+            elseif pingNumber < 100 then
+                getgenv().Haunts.Silent.Prediction = 0.13573
+            elseif pingNumber < 110 then
+                getgenv().Haunts.Silent.Prediction = 0.13334
+            elseif pingNumber < 120 then
+                getgenv().Haunts.Silent.Prediction = 0.14552
+            elseif pingNumber < 130 then
+                getgenv().Haunts.Silent.Prediction = 0.14376
+            elseif pingNumber < 140 then
+                getgenv().Haunts.Silent.Prediction = 0.15669
+            elseif pingNumber < 150 then
+                getgenv().Haunts.Silent.Prediction = 0.12234
+            elseif pingNumber < 160 then
+                getgenv().Haunts.Silent.Prediction = 0.15214
+            elseif pingNumber < 170 then
+                getgenv().Haunts.Silent.Prediction = 0.16262
+            elseif pingNumber < 180 then
+                getgenv().Haunts.Silent.Prediction = 0.19231
+            elseif pingNumber < 190 then
+                getgenv().Haunts.Silent.Prediction = 0.19284
+            elseif pingNumber < 200 then
+                getgenv().Haunts.Silent.Prediction = 0.16594
+            elseif pingNumber < 210 then
+                getgenv().Haunts.Silent.Prediction = 0.16942
+        
+        end
+        wait(1)
+    end
